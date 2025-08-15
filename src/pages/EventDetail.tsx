@@ -15,6 +15,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
+import { TurnoRichiestaRow } from "@/components/events/TurnoRichiestaRow";
+import { GapFillerDialog } from "@/components/events/GapFillerDialog";
 const EventDetail = () => {
   const {
     id
@@ -25,6 +27,15 @@ const EventDetail = () => {
   const clients = useAppStore(s => s.clients);
   const brands = useAppStore(s => s.brands);
   const operators = useAppStore(s => s.operators);
+  
+  // New timeline-based methods
+  const createTurnoRichiesta = useAppStore(s => s.createTurnoRichiesta);
+  const getTurniRichiestiByEvent = useAppStore(s => s.getTurniRichiestiByEvent);
+  const getAssegnazioniByEvent = useAppStore(s => s.getAssegnazioniByEvent);
+  const getAssegnazioniByTurno = useAppStore(s => s.getAssegnazioniByTurno);
+  const fillGap = useAppStore(s => s.fillGap);
+  
+  // Legacy methods (keep for backward compatibility)
   const createShift = useAppStore(s => s.createShift);
   const assignOperators = useAppStore(s => s.assignOperators);
   const setOperatorSlot = useAppStore(s => s.setOperatorSlot);
@@ -37,9 +48,19 @@ const EventDetail = () => {
   const updateShiftActivityType = useAppStore(s => s.updateShiftActivityType);
   const deleteShift = useAppStore(s => s.deleteShift);
   
+  // State for gap filling
+  const [gapFillerOpen, setGapFillerOpen] = useState(false);
+  const [currentGap, setCurrentGap] = useState<{ turnoId: string; gapStart: string; gapEnd: string } | null>(null);
+  
   // State for individual row time editing - each row has its own independent times
   const [rowTimes, setRowTimes] = useState<{[key: string]: {startTime: string, endTime: string}}>({});
   const [editingTimes, setEditingTimes] = useState<string | null>(null);
+  
+  // Get data using new timeline system
+  const turniRichiesti = getTurniRichiestiByEvent(id!);
+  const allAssegnazioni = getAssegnazioniByEvent(id!);
+  
+  // Legacy data (keep for backward compatibility)
   const shifts = useAppStore(s => s.getShiftsByEvent(id!));
   const clientName = useMemo(() => clients.find(c => c.id === event?.clientId)?.name, [clients, event]);
   const brandName = useMemo(() => brands.find(b => b.id === event?.brandId)?.name, [brands, event]);
@@ -52,6 +73,24 @@ const EventDetail = () => {
   const [activityCode, setActivityCode] = useState(event?.activityCode || "");
   const [editingNotes, setEditingNotes] = useState<string | null>(null);
   const [tempNotes, setTempNotes] = useState("");
+
+  // Calculate counters from new timeline system
+  const totalOperatorsAssigned = allAssegnazioni.filter(a => a.operatoreId && a.operatoreId.trim() !== "").length;
+  
+  const totalAssignedHours = allAssegnazioni.reduce((total, assignment) => {
+    if (!assignment.operatoreId || assignment.operatoreId.trim() === "") return total;
+    const startTime = new Date(`2000-01-01T${assignment.startTime}`);
+    const endTime = new Date(`2000-01-01T${assignment.endTime}`);
+    const hours = (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60);
+    return total + hours;
+  }, 0);
+  
+  const totalEventHours = turniRichiesti.reduce((total, turno) => {
+    const startTime = new Date(`2000-01-01T${turno.startTime}`);
+    const endTime = new Date(`2000-01-01T${turno.endTime}`);
+    const hours = (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60);
+    return total + (hours * turno.operatoriRichiesti);
+  }, 0);
   
   if (!event) return <main className="container py-8">
       <p className="text-muted-foreground">Evento non trovato.</p>
@@ -60,19 +99,29 @@ const EventDetail = () => {
   const handleShiftSubmit = (values: any) => {
     const d = `${values.date.getFullYear()}-${String(values.date.getMonth() + 1).padStart(2, "0")}-${String(values.date.getDate()).padStart(2, "0")}`;
     
-    // Crea array di slot vuoti per il numero di operatori specificato
-    const operatorIds = Array(values.numOperators).fill("");
-    
-    createShift({
+    // Create TurnoRichiesta instead of legacy Shift
+    createTurnoRichiesta({
       eventId: event.id,
       date: d,
       startTime: values.startTime,
       endTime: values.endTime,
-      operatorIds: operatorIds,
+      operatoriRichiesti: values.numOperators,
       activityType: values.activityType as ActivityType,
-      requiredOperators: values.numOperators,
       notes: values.notes || undefined
     });
+  };
+
+  const handleFillGap = (turnoId: string, gapStart: string, gapEnd: string) => {
+    setCurrentGap({ turnoId, gapStart, gapEnd });
+    setGapFillerOpen(true);
+  };
+
+  const handleGapFillConfirm = (operatorId: string) => {
+    if (currentGap) {
+      fillGap(currentGap.turnoId, currentGap.gapStart, currentGap.gapEnd, operatorId);
+      setCurrentGap(null);
+      setGapFillerOpen(false);
+    }
   };
 
   const onAssign = (selectedIds: string[]) => {
@@ -153,9 +202,7 @@ const EventDetail = () => {
                 <div>
                   <p className="text-sm text-muted-foreground">Totale operatori assegnati</p>
                   <p className="text-xl font-semibold text-primary">
-                    {shifts.reduce((total, shift) => {
-                      return total + shift.operatorIds.filter(id => id && id.trim() !== "").length;
-                    }, 0)}
+                    {totalOperatorsAssigned}
                   </p>
                 </div>
               </div>
@@ -167,13 +214,7 @@ const EventDetail = () => {
                 <div>
                   <p className="text-sm text-muted-foreground">Totale ore assegnate</p>
                   <p className="text-xl font-semibold text-primary">
-                    {shifts.reduce((total, shift) => {
-                      const assignedOperators = shift.operatorIds.filter(id => id && id.trim() !== "").length;
-                      const startTime = new Date(`2000-01-01T${shift.startTime}`);
-                      const endTime = new Date(`2000-01-01T${shift.endTime}`);
-                      const hours = (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60);
-                      return total + (hours * assignedOperators);
-                    }, 0).toFixed(1)}
+                    {totalAssignedHours.toFixed(1)}
                   </p>
                 </div>
               </div>
@@ -185,12 +226,7 @@ const EventDetail = () => {
                 <div>
                   <p className="text-sm text-muted-foreground">Totale ore evento</p>
                   <p className="text-xl font-semibold text-primary">
-                    {shifts.reduce((total, shift) => {
-                      const startTime = new Date(`2000-01-01T${shift.startTime}`);
-                      const endTime = new Date(`2000-01-01T${shift.endTime}`);
-                      const hours = (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60);
-                      return total + (hours * shift.requiredOperators);
-                    }, 0).toFixed(1)}
+                    {totalEventHours.toFixed(1)}
                   </p>
                 </div>
               </div>
@@ -262,174 +298,31 @@ const EventDetail = () => {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>
-                  <Button variant="ghost" size="sm" onClick={() => toggleSort('date')} className="px-0">
-                    <span className="mr-2">Data</span>
-                    {sort.key !== 'date' ? <ArrowUpDown className="h-4 w-4 text-muted-foreground" /> : (sort.dir === 'asc' ? <ArrowUp className="h-4 w-4 text-muted-foreground" /> : <ArrowDown className="h-4 w-4 text-muted-foreground" />)}
-                  </Button>
-                </TableHead>
-                <TableHead>
-                  <Button variant="ghost" size="sm" onClick={() => toggleSort('startTime')} className="px-0">
-                    <span className="mr-2">Ora Inizio</span>
-                    {sort.key !== 'startTime' ? <ArrowUpDown className="h-4 w-4 text-muted-foreground" /> : (sort.dir === 'asc' ? <ArrowUp className="h-4 w-4 text-muted-foreground" /> : <ArrowDown className="h-4 w-4 text-muted-foreground" />)}
-                  </Button>
-                </TableHead>
-                <TableHead>
-                  <Button variant="ghost" size="sm" onClick={() => toggleSort('endTime')} className="px-0">
-                    <span className="mr-2">Ora Fine</span>
-                    {sort.key !== 'endTime' ? <ArrowUpDown className="h-4 w-4 text-muted-foreground" /> : (sort.dir === 'asc' ? <ArrowUp className="h-4 w-4 text-muted-foreground" /> : <ArrowDown className="h-4 w-4 text-muted-foreground" />)}
-                  </Button>
-                </TableHead>
+                <TableHead>Data</TableHead>
+                <TableHead>Ora Inizio</TableHead>
+                <TableHead>Ora Fine</TableHead>
                 <TableHead>Tipologia Attività</TableHead>
+                <TableHead>Copertura Timeline</TableHead>
                 <TableHead>Operatore</TableHead>
                 <TableHead>TL</TableHead>
-                <TableHead>Note</TableHead>
                 <TableHead>Azioni</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {sortedShifts.map(s => {
-                // Show one row for each operator slot (assigned or empty)
-                return s.operatorIds.map((operatorId, slotIndex) => {
-                  const isAssigned = operatorId && operatorId.trim() !== "";
-                  const assignedOperatorsCount = s.operatorIds.filter(id => id && id.trim() !== "").length;
-                  
+              {turniRichiesti.length > 0 ? (
+                turniRichiesti.map((turno) => {
+                  const assegnazioni = getAssegnazioniByTurno(turno.id);
                   return (
-                    <TableRow 
-                      key={`${s.id}-slot-${slotIndex}`}
-                      id={`turn-${s.id}-${slotIndex}`}
-                      className="even:bg-muted transition-all duration-300 hover:bg-muted/80"
-                    >
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <span>{`${s.date.split("-").reverse().join("/")}`}</span>
-                          {slotIndex === 0 && (
-                            <span className="operator-count text-xs bg-primary/10 text-primary px-2 py-1 rounded-full">
-                              {assignedOperatorsCount}/{s.requiredOperators}
-                            </span>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="time"
-                            value={s.startTime}
-                            onChange={(e) => updateShiftTime(s.id, { startTime: e.target.value })}
-                            className="px-3 py-1 border border-input rounded text-sm bg-background"
-                          />
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="time"
-                            value={s.endTime}
-                            onChange={(e) => updateShiftTime(s.id, { endTime: e.target.value })}
-                            className="px-3 py-1 border border-input rounded text-sm bg-background"
-                          />
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center text-sm text-muted-foreground bg-muted px-3 py-2 rounded">
-                          {s.activityType || "Non specificato"}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {isAssigned ? (
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium">{getOperatorName(operatorId)}</span>
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              onClick={() => {
-                                const shift = sortedShifts.find(shift => shift.id === s.id);
-                                if (shift) {
-                                  removeOperator(s.id, operatorId);
-                                  // Se non ci sono più operatori assegnati, rimuovi l'intero turno
-                                  const remainingOperators = shift.operatorIds.filter(id => id && id.trim() !== "" && id !== operatorId);
-                                  if (remainingOperators.length === 0) {
-                                    deleteShift(s.id);
-                                  }
-                                }
-                              }}
-                              aria-label={`Rimuovi ${getOperatorName(operatorId)}`}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              onClick={() => {
-                                setCurrentShift(s.id);
-                                setCurrentSlotIndex(slotIndex);
-                                setAssignOpen(true);
-                              }}
-                              aria-label={`Modifica operatore ${getOperatorName(operatorId)}`}
-                            >
-                              <Edit2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        ) : (
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            onClick={() => {
-                              setCurrentShift(s.id);
-                              setCurrentSlotIndex(slotIndex);
-                              setAssignOpen(true);
-                            }}
-                          >
-                            <UserPlus className="h-4 w-4" />
-                            Assegna
-                          </Button>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {isAssigned ? (
-                          <Checkbox
-                            checked={s.teamLeaderId === operatorId}
-                            onCheckedChange={() => handleToggleTeamLeader(s.id, operatorId, s.teamLeaderId === operatorId)}
-                            aria-label={s.teamLeaderId === operatorId ? "Rimuovi come team leader" : "Imposta come team leader"}
-                          />
-                        ) : "-"}
-                      </TableCell>
-                        <TableCell>
-                           {s.notes && s.notes.trim() !== "" ? (
-                             <Button 
-                               size="sm" 
-                               variant="ghost" 
-                               onClick={() => {
-                                 setEditingNotes(s.id);
-                                 setTempNotes(s.notes || "");
-                               }}
-                               aria-label="Visualizza/Modifica note"
-                               title={s.notes}
-                             >
-                               <FileText className="h-4 w-4" />
-                             </Button>
-                           ) : (
-                             "-"
-                           )}
-                         </TableCell>
-                         <TableCell>
-                           {slotIndex === 0 && (
-                             <Button
-                               variant="ghost"
-                               size="sm"
-                               onClick={() => deleteShift(s.id)}
-                               className="text-destructive hover:text-destructive"
-                               aria-label="Elimina intero turno"
-                             >
-                               <Trash2 className="h-4 w-4" />
-                             </Button>
-                           )}
-                         </TableCell>
-                     </TableRow>
-                   );
-                 });
-              })}
-              {sortedShifts.length === 0 && (
+                    <TurnoRichiestaRow
+                      key={turno.id}
+                      turno={turno}
+                      assegnazioni={assegnazioni}
+                      operators={operators}
+                      onFillGap={handleFillGap}
+                    />
+                  );
+                })
+              ) : (
                 <TableRow>
                   <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
                     Nessun turno pianificato. Crea il primo turno.
@@ -461,6 +354,18 @@ const EventDetail = () => {
         </DialogContent>
       </Dialog>
 
+
+      {/* Gap Filler Dialog */}
+      {currentGap && (
+        <GapFillerDialog
+          open={gapFillerOpen}
+          onOpenChange={setGapFillerOpen}
+          turnoId={currentGap.turnoId}
+          gapStart={currentGap.gapStart}
+          gapEnd={currentGap.gapEnd}
+          onConfirm={handleGapFillConfirm}
+        />
+      )}
 
       <OperatorAssignDialog open={assignOpen} onOpenChange={setAssignOpen} operators={currentShift ? operators.filter(op => !shifts.find(s => s.id === currentShift)?.operatorIds.includes(op.id)) : operators} onConfirm={onAssign} />
     </main>;
