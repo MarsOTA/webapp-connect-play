@@ -144,24 +144,60 @@ const EventDetail = () => {
       <section className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
         <div className="lg:col-span-1">
           <h1 className="font-semibold mb-2 text-4xl">{event.title}</h1>
-          <div className="flex items-center gap-2 mt-2">
-            <span className="text-muted-foreground">Indirizzo:</span>
-            {editingAddress ? <div className="flex items-center gap-2">
-                <Input value={tempAddress} onChange={e => setTempAddress(e.target.value)} className="max-w-md" placeholder="Inserisci indirizzo evento" />
-                <Button size="sm" variant="ghost" onClick={handleSaveAddress}>
-                  <Save className="h-4 w-4" />
-                </Button>
-                <Button size="sm" variant="ghost" onClick={handleCancelEditAddress}>
-                  <X className="h-4 w-4" />
-                </Button>
-              </div> : <div className="flex items-center gap-2">
-                <span>{event.address || "Non specificato"}</span>
-                <Button size="sm" variant="ghost" onClick={() => setEditingAddress(true)} aria-label="Modifica indirizzo">
-                  <Edit2 className="h-4 w-4" />
-                </Button>
-              </div>}
+          
+          {/* Counters under title */}
+          <div className="grid grid-cols-3 gap-4 mt-4">
+            <div className="bg-accent/20 rounded-lg p-4 border border-accent/40">
+              <div className="flex items-center gap-2">
+                <Users className="h-5 w-5 text-primary" />
+                <div>
+                  <p className="text-sm text-muted-foreground">Totale operatori assegnati</p>
+                  <p className="text-xl font-semibold text-primary">
+                    {shifts.reduce((total, shift) => {
+                      return total + shift.operatorIds.filter(id => id && id.trim() !== "").length;
+                    }, 0)}
+                  </p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-accent/20 rounded-lg p-4 border border-accent/40">
+              <div className="flex items-center gap-2">
+                <Clock className="h-5 w-5 text-primary" />
+                <div>
+                  <p className="text-sm text-muted-foreground">Totale ore assegnate</p>
+                  <p className="text-xl font-semibold text-primary">
+                    {shifts.reduce((total, shift) => {
+                      const assignedOperators = shift.operatorIds.filter(id => id && id.trim() !== "").length;
+                      const startTime = new Date(`2000-01-01T${shift.startTime}`);
+                      const endTime = new Date(`2000-01-01T${shift.endTime}`);
+                      const hours = (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60);
+                      return total + (hours * assignedOperators);
+                    }, 0).toFixed(1)}
+                  </p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-accent/20 rounded-lg p-4 border border-accent/40">
+              <div className="flex items-center gap-2">
+                <ListChecks className="h-5 w-5 text-primary" />
+                <div>
+                  <p className="text-sm text-muted-foreground">Totale ore evento</p>
+                  <p className="text-xl font-semibold text-primary">
+                    {shifts.reduce((total, shift) => {
+                      const startTime = new Date(`2000-01-01T${shift.startTime}`);
+                      const endTime = new Date(`2000-01-01T${shift.endTime}`);
+                      const hours = (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60);
+                      return total + (hours * shift.requiredOperators);
+                    }, 0).toFixed(1)}
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
-          <div className="flex items-center gap-2 mt-2">
+          
+          <div className="flex items-center gap-2 mt-4">
             <span className="text-muted-foreground">Codice attività:</span>
             <Input 
               placeholder="Inserisci codice attività" 
@@ -182,12 +218,10 @@ const EventDetail = () => {
 
 
       <section>
-        <div className="flex items-center gap-4 mb-4">
-          <div>
-            <h2 className="font-bold text-2xl flex items-center gap-2">
-              <span>LISTA TURNI EVENTO</span>
-            </h2>
-            <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-6">
+            <h2 className="font-bold text-2xl">LISTA TURNI EVENTO</h2>
+            <div className="flex items-center gap-4 text-sm text-muted-foreground">
               <span className="flex items-center gap-1">
                 <CalendarIcon className="h-4 w-4" />
                 {event.startDate && event.endDate ? (
@@ -196,7 +230,31 @@ const EventDetail = () => {
                   "Date evento non specificate"
                 )}
               </span>
-              <span>{event.address || "Indirizzo non specificato"}</span>
+              <div className="flex items-center gap-2">
+                {editingAddress ? (
+                  <div className="flex items-center gap-2">
+                    <Input 
+                      value={tempAddress} 
+                      onChange={e => setTempAddress(e.target.value)} 
+                      className="max-w-md h-8" 
+                      placeholder="Inserisci indirizzo evento" 
+                    />
+                    <Button size="sm" variant="ghost" onClick={handleSaveAddress}>
+                      <Save className="h-3 w-3" />
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={handleCancelEditAddress}>
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <span>{event.address || "Indirizzo non specificato"}</span>
+                    <Button size="sm" variant="ghost" onClick={() => setEditingAddress(true)} aria-label="Modifica indirizzo">
+                      <Edit2 className="h-3 w-3" />
+                    </Button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
