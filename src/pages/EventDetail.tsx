@@ -77,8 +77,10 @@ const EventDetail = () => {
 
   const onAssign = (selectedIds: string[]) => {
     if (currentShift && currentSlotIndex !== null) {
-      // Assegnare operatore a slot specifico di turno esistente
-      if (selectedIds.length > 0) {
+      // Se selectedIds è vuoto o contiene stringa vuota, significa "Non assegnato"
+      if (selectedIds.length === 0 || selectedIds[0] === "") {
+        setOperatorSlot(currentShift, currentSlotIndex, "");
+      } else {
         setOperatorSlot(currentShift, currentSlotIndex, selectedIds[0]);
       }
     }
@@ -188,15 +190,10 @@ const EventDetail = () => {
             <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
               <span className="flex items-center gap-1">
                 <CalendarIcon className="h-4 w-4" />
-                {shifts.length > 0 ? (
-                  (() => {
-                    const dates = shifts.map(s => s.date);
-                    const minDate = dates.reduce((min, date) => date < min ? date : min);
-                    const maxDate = dates.reduce((max, date) => date > max ? date : max);
-                    return `dal ${minDate.split("-").reverse().join("/")} al ${maxDate.split("-").reverse().join("/")}`;
-                  })()
+                {event.startDate && event.endDate ? (
+                  `dal ${event.startDate.split("-").reverse().join("/")} al ${event.endDate.split("-").reverse().join("/")}`
                 ) : (
-                  "Nessuna data turno"
+                  "Date evento non specificate"
                 )}
               </span>
               <span>{event.address || "Indirizzo non specificato"}</span>

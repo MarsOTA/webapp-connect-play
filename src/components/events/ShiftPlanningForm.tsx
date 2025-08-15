@@ -72,7 +72,6 @@ const ShiftPlanningForm = ({ onSubmit, onReset }: ShiftPlanningFormProps) => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Data inizio turno */}
           <div className="space-y-2">
-            <Label className="text-sm text-muted-foreground">Data inizio turno</Label>
             <Popover open={isOpen} onOpenChange={setIsOpen}>
               <PopoverTrigger asChild>
                 <Button
@@ -109,7 +108,6 @@ const ShiftPlanningForm = ({ onSubmit, onReset }: ShiftPlanningFormProps) => {
 
           {/* Tipologia attività */}
           <div className="space-y-2">
-            <Label className="text-sm text-muted-foreground">Tipologia attività</Label>
             <Select onValueChange={(value) => form.setValue("activityType", value)}>
               <SelectTrigger className="h-11">
                 <SelectValue placeholder="Seleziona tipologia" />
@@ -129,9 +127,8 @@ const ShiftPlanningForm = ({ onSubmit, onReset }: ShiftPlanningFormProps) => {
 
           {/* Note per turno */}
           <div className="space-y-2">
-            <Label className="text-sm text-muted-foreground">Note per turno</Label>
             <Textarea
-              placeholder="Inserisci note..."
+              placeholder="Inserisci note per il turno..."
               className="h-11 resize-none"
               {...form.register("notes")}
             />
@@ -141,15 +138,12 @@ const ShiftPlanningForm = ({ onSubmit, onReset }: ShiftPlanningFormProps) => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Ora inizio */}
           <div className="space-y-2">
-            <Label className="text-sm text-muted-foreground">Ora inizio</Label>
-            <div className="relative">
-              <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                type="time"
-                className="h-11 pl-10"
-                {...form.register("startTime")}
-              />
-            </div>
+            <Input
+              type="time"
+              placeholder="Ora inizio"
+              className="h-11"
+              {...form.register("startTime")}
+            />
             {form.formState.errors.startTime && (
               <p className="text-sm text-destructive">{form.formState.errors.startTime.message}</p>
             )}
@@ -157,15 +151,12 @@ const ShiftPlanningForm = ({ onSubmit, onReset }: ShiftPlanningFormProps) => {
 
           {/* Ora fine */}
           <div className="space-y-2">
-            <Label className="text-sm text-muted-foreground">Ora fine</Label>
-            <div className="relative">
-              <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                type="time"
-                className="h-11 pl-10"
-                {...form.register("endTime")}
-              />
-            </div>
+            <Input
+              type="time"
+              placeholder="Ora fine"
+              className="h-11"
+              {...form.register("endTime")}
+            />
             {form.formState.errors.endTime && (
               <p className="text-sm text-destructive">{form.formState.errors.endTime.message}</p>
             )}
@@ -173,12 +164,12 @@ const ShiftPlanningForm = ({ onSubmit, onReset }: ShiftPlanningFormProps) => {
 
           {/* N°operatori */}
           <div className="space-y-2">
-            <Label className="text-sm text-muted-foreground">N°operatori</Label>
             <div className="relative">
               <Input
                 type="number"
                 min="1"
                 max="20"
+                placeholder="N° operatori"
                 className="h-11 pr-10 text-center"
                 value={form.watch("numOperators")}
                 onChange={(e) => form.setValue("numOperators", parseInt(e.target.value) || 1)}
