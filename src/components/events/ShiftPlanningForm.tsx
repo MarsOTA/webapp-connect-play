@@ -140,13 +140,13 @@ const ShiftPlanningForm = ({ onSubmit, onReset }: ShiftPlanningFormProps) => {
           </div>
         </div>
 
-        {/* Aggiungi turno button */}
+        {/* Aggiungi operatori button */}
         <div className="pt-4">
           <Button
             type="submit"
             className="w-full bg-primary hover:bg-primary/90 text-primary-foreground h-12 text-base font-medium"
           >
-            Aggiungi turno
+            AGGIUNGI OPERATORI
           </Button>
         </div>
       </form>
