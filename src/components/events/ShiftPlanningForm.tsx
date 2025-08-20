@@ -17,8 +17,6 @@ const FormSchema = z.object({
   startTime: z.string().min(1, "Seleziona ora di inizio"),
   endTime: z.string().min(1, "Seleziona ora di fine"),
   activityType: z.string().min(1, "Seleziona tipologia attività"),
-  numOperators: z.number().min(1, "Inserisci numero operatori").max(20, "Massimo 20 operatori"),
-  notes: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof FormSchema>;
@@ -38,8 +36,6 @@ const ShiftPlanningForm = ({ onSubmit, onReset }: ShiftPlanningFormProps) => {
       startTime: "",
       endTime: "",
       activityType: "",
-      numOperators: 1,
-      notes: "",
     },
   });
 
@@ -59,7 +55,7 @@ const ShiftPlanningForm = ({ onSubmit, onReset }: ShiftPlanningFormProps) => {
       </h2>
       
       <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Data inizio turno */}
           <div className="space-y-2">
             <Popover open={isOpen} onOpenChange={setIsOpen}>
@@ -114,18 +110,9 @@ const ShiftPlanningForm = ({ onSubmit, onReset }: ShiftPlanningFormProps) => {
               <p className="text-sm text-destructive">{form.formState.errors.activityType.message}</p>
             )}
           </div>
-
-          {/* Note per turno */}
-          <div className="space-y-2">
-            <Input
-              placeholder="Inserisci note per il turno..."
-              className="h-11"
-              {...form.register("notes")}
-            />
-          </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Ora inizio */}
           <div className="space-y-2">
             <Input
@@ -149,46 +136,6 @@ const ShiftPlanningForm = ({ onSubmit, onReset }: ShiftPlanningFormProps) => {
             />
             {form.formState.errors.endTime && (
               <p className="text-sm text-destructive">{form.formState.errors.endTime.message}</p>
-            )}
-          </div>
-
-          {/* N°operatori */}
-          <div className="space-y-2">
-            <div className="relative">
-              <Input
-                type="number"
-                min="1"
-                max="20"
-                placeholder="N° operatori"
-                className="h-11 text-center pr-10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                value={form.watch("numOperators")}
-                onChange={(e) => form.setValue("numOperators", parseInt(e.target.value) || 1)}
-              />
-              <div className="absolute right-1 top-1/2 -translate-y-1/2 flex flex-col">
-                <button
-                  type="button"
-                  className="h-5 w-8 flex items-center justify-center mb-1"
-                  onClick={() => {
-                    const current = form.getValues("numOperators");
-                    if (current < 20) form.setValue("numOperators", current + 1);
-                  }}
-                >
-                  <ChevronUp className="h-4 w-4" style={{ color: "#72AD97" }} />
-                </button>
-                <button
-                  type="button"
-                  className="h-5 w-8 flex items-center justify-center"
-                  onClick={() => {
-                    const current = form.getValues("numOperators");
-                    if (current > 1) form.setValue("numOperators", current - 1);
-                  }}
-                >
-                  <ChevronDown className="h-4 w-4" style={{ color: "#72AD97" }} />
-                </button>
-              </div>
-            </div>
-            {form.formState.errors.numOperators && (
-              <p className="text-sm text-destructive">{form.formState.errors.numOperators.message}</p>
             )}
           </div>
         </div>

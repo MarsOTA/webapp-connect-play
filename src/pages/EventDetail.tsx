@@ -53,8 +53,8 @@ const EventDetail = () => {
   const handleShiftSubmit = (values: any) => {
     const d = `${values.date.getFullYear()}-${String(values.date.getMonth() + 1).padStart(2, "0")}-${String(values.date.getDate()).padStart(2, "0")}`;
     
-    // Crea array di slot vuoti per il numero di operatori specificato
-    const operatorIds = Array(values.numOperators).fill("");
+    // Crea array con un singolo slot vuoto
+    const operatorIds = [""];
     
     createShift({
       eventId: event.id,
@@ -63,8 +63,7 @@ const EventDetail = () => {
       endTime: values.endTime,
       operatorIds: operatorIds,
       activityType: values.activityType as ActivityType,
-      requiredOperators: values.numOperators,
-      notes: values.notes || undefined
+      requiredOperators: 1
     });
   };
 
@@ -221,38 +220,6 @@ const EventDetail = () => {
                 />
               </div>
               
-              <div className="flex items-center gap-3">
-                <Calendar className="h-5 w-5" style={{ color: '#72AD97', backgroundColor: 'transparent' }} />
-                <div className="flex-1">
-                  <div className="flex gap-2">
-                    <Input
-                      type="date"
-                      value={event.startDate || ''}
-                      onChange={(e) => updateEvent(event.id, { startDate: e.target.value })}
-                      className="h-10 border-0 border-b border-border/30 rounded-none focus:border-primary bg-transparent"
-                      placeholder="Data inizio"
-                    />
-                    <span className="self-center text-muted-foreground">al</span>
-                    <Input
-                      type="date"
-                      value={event.endDate || ''}
-                      onChange={(e) => updateEvent(event.id, { endDate: e.target.value })}
-                      className="h-10 border-0 border-b border-border/30 rounded-none focus:border-primary bg-transparent"
-                      placeholder="Data fine"
-                    />
-                  </div>
-                </div>
-              </div>
-              
-              <div className="flex items-center gap-3">
-                <FileText className="h-5 w-5" style={{ color: '#72AD97', backgroundColor: 'transparent' }} />
-                <Input
-                  value={event.notes || ''}
-                  onChange={(e) => updateEvent(event.id, { notes: e.target.value })}
-                  className="flex-1 h-10 border-0 border-b border-border/30 rounded-none focus:border-primary bg-transparent"
-                  placeholder="Necessità di GPG..."
-                />
-              </div>
               
               <div className="flex items-center gap-3">
                 <Badge className="h-5 w-5" style={{ color: '#72AD97', backgroundColor: 'transparent' }} />

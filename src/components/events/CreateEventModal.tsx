@@ -16,9 +16,7 @@ const FormSchema = z.object({
   brandId: z.string().min(1, "Seleziona un brand"),
   address: z.string().min(3, "Inserisci un indirizzo valido"),
   customAddress: z.string().optional(),
-  startDate: z.string().min(1, "Seleziona data di inizio"),
-  endDate: z.string().min(1, "Seleziona data di fine"),
-  notes: z.string().optional(),
+  activityCode: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof FormSchema>;
@@ -37,26 +35,18 @@ const CreateEventModal = ({ open, onOpenChange }: CreateEventModalProps) => {
 
   const form = useForm<FormValues>({
     resolver: zodResolver(FormSchema),
-    defaultValues: { clientId: "", brandId: "", address: "", customAddress: "", startDate: "", endDate: "", notes: "" },
+    defaultValues: { clientId: "", brandId: "", address: "", customAddress: "", activityCode: "" },
   });
 
   const selectedClientId = form.watch("clientId");
   const selectedBrandId = form.watch("brandId");
   const selectedAddress = form.watch("address");
-  const startDate = form.watch("startDate");
   
   // Filter brands based on selected client
   const availableBrands = selectedClientId ? getBrandsByClient(selectedClientId) : [];
   
   // Auto-populate address when brand is selected
   const selectedBrand = brands.find(b => b.id === selectedBrandId);
-  
-  // Copy start date to end date when start date changes
-  React.useEffect(() => {
-    if (startDate && !form.getValues("endDate")) {
-      form.setValue("endDate", startDate);
-    }
-  }, [startDate, form]);
   
   // Reset address when brand is selected
   React.useEffect(() => {
@@ -87,9 +77,7 @@ const CreateEventModal = ({ open, onOpenChange }: CreateEventModalProps) => {
       clientId: values.clientId, 
       brandId: values.brandId, 
       address: finalAddress,
-      startDate: values.startDate,
-      endDate: values.endDate,
-      notes: values.notes 
+      activityCode: values.activityCode 
     });
 
     toast({ title: "Evento creato", description: `${title} salvato correttamente` });
@@ -184,34 +172,11 @@ const CreateEventModal = ({ open, onOpenChange }: CreateEventModalProps) => {
             )}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Data Inizio Evento</Label>
-              <Input
-                type="date"
-                {...form.register("startDate")}
-              />
-              {form.formState.errors.startDate && (
-                <p className="text-sm text-destructive">{form.formState.errors.startDate.message}</p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label>Data Fine Evento</Label>
-              <Input
-                type="date"
-                {...form.register("endDate")}
-              />
-              {form.formState.errors.endDate && (
-                <p className="text-sm text-destructive">{form.formState.errors.endDate.message}</p>
-              )}
-            </div>
-          </div>
-
           <div className="space-y-2">
-            <Label>Note (opzionale)</Label>
+            <Label>Codice Attività</Label>
             <Input
-              placeholder="Note per l'evento..."
-              {...form.register("notes")}
+              placeholder="Codice attività..."
+              {...form.register("activityCode")}
             />
           </div>
 
