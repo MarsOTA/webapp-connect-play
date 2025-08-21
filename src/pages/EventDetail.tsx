@@ -339,22 +339,9 @@ const EventDetail = () => {
                           <span className="text-sm">{row.activityType || "-"}</span>
                         </TableCell>
                         <TableCell>
-                          {row.isAssigned ? (
-                            <span className="text-sm font-medium">{getOperatorName(row.operatorId)}</span>
-                          ) : (
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              onClick={() => {
-                                setCurrentShift(row.id);
-                                setCurrentSlotIndex(row.slotIndex);
-                                setAssignOpen(true);
-                              }}
-                            >
-                              <UserPlus className="h-4 w-4" />
-                              Assegna
-                            </Button>
-                          )}
+                          <span className="text-sm font-medium">
+                            {row.isAssigned ? getOperatorName(row.operatorId) : "Non assegnato"}
+                          </span>
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1">
